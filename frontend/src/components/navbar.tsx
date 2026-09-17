@@ -55,6 +55,13 @@ export default function Navbar() {
                 <p className="text-xs text-dark-400">{user.email}</p>
               </div>
 
+              <button
+                onClick={() => router.push("/kiosk")}
+                className="px-3 py-1.5 text-xs font-semibold bg-brand-500/10 border border-brand-500/30 text-brand-400 hover:bg-brand-500/20 rounded-lg transition-colors flex items-center gap-1.5"
+              >
+                📷 Kiosk Scanner
+              </button>
+
               <span
                 className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${
                   roleBadgeColor[user.role] || ""

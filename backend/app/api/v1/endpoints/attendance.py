@@ -53,13 +53,13 @@ def verify_qr_token(
     db: Session = Depends(get_db),
 ):
     """
-    Verify a scanned QR pass token and record check-in.
+    Verify a scanned QR pass token and record check-in/check-out.
 
     Security:
       1. Decode the JWT and validate expiry
       2. Check ``jti`` against UsedToken table → reject replays
       3. Persist jti to prevent future reuse
-      4. Create an Attendance record with ``marked_by='qr_scan'``
+      4. Handle exactly one check-in and one check-out per day.
     """
     # 1. Decode
     try:
@@ -101,15 +101,39 @@ def verify_qr_token(
             detail="User not found",
         )
 
-    attendance = Attendance(user_id=user_id, marked_by="qr_scan")
-    db.add(attendance)
+    now = datetime.now(timezone.utc)
+    start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
+
+    # Find today's attendance record
+    attendance = db.query(Attendance).filter(
+        Attendance.user_id == user_id,
+        Attendance.check_in >= start_of_day,
+        Attendance.check_in <= now
+    ).order_by(Attendance.check_in.desc()).first()
+
+    if attendance:
+        if attendance.check_out is None:
+            # Check-out
+            attendance.check_out = now
+            msg = "Check-out successful"
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="User has already checked in and out for today",
+            )
+    else:
+        # Check-in
+        attendance = Attendance(user_id=user_id, marked_by="qr_scan", check_in=now)
+        db.add(attendance)
+        msg = "Check-in successful"
+
     db.commit()
 
     return PassTokenVerify(
         user_id=user.id,
         full_name=user.full_name,
         email=user.email,
-        message="Check-in successful",
+        message=msg,
     )
 
 
@@ -128,6 +152,7 @@ def manual_mark_attendance(
     Manually mark a member's attendance (trainer or admin only).
 
     Trainers can only mark their assigned trainees.
+    Handles exactly one check-in and check-out per day.
     """
     target_user = db.query(User).filter(User.id == body.user_id).first()
     if not target_user:
@@ -146,12 +171,56 @@ def manual_mark_attendance(
             detail="You can only mark attendance for your assigned trainees",
         )
 
-    attendance = Attendance(
-        user_id=body.user_id,
-        marked_by="manual",
-        marked_by_user_id=current_user.id,
-    )
-    db.add(attendance)
+    now = datetime.now(timezone.utc)
+    start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
+
+    # Find today's attendance record
+    attendance = db.query(Attendance).filter(
+        Attendance.user_id == body.user_id,
+        Attendance.check_in >= start_of_day,
+        Attendance.check_in <= now
+    ).order_by(Attendance.check_in.desc()).first()
+
+    if body.status == "absent":
+        if attendance:
+            db.delete(attendance)
+            db.commit()
+            # Return dummy log to signify deletion
+            return AttendanceLog(
+                id=attendance.id,
+                user_id=attendance.user_id,
+                user_name=target_user.full_name,
+                user_email=target_user.email,
+                check_in=attendance.check_in,
+                marked_by="manual"
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No attendance record found for today to mark absent",
+            )
+
+    if attendance:
+        if attendance.check_out is None:
+            # Check-out
+            attendance.check_out = now
+            attendance.marked_by = "manual"
+            attendance.marked_by_user_id = current_user.id
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="User has already checked in and out for today",
+            )
+    else:
+        # Check-in
+        attendance = Attendance(
+            user_id=body.user_id,
+            marked_by="manual",
+            marked_by_user_id=current_user.id,
+            check_in=now
+        )
+        db.add(attendance)
+        
     db.commit()
     db.refresh(attendance)
 
@@ -220,3 +289,26 @@ def get_attendance_logs(
         )
 
     return AttendanceListResponse(records=logs, total=total)
+
+
+@router.get("/my-logs", response_model=AttendanceListResponse)
+def get_my_attendance_logs(
+    skip: int = 0,
+    limit: int = 50,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Restricted to CUSTOMER. Returns own check-in timestamps."""
+    return get_attendance_logs(skip=skip, limit=limit, db=db, current_user=current_user)
+
+
+@router.get("/report", response_model=AttendanceListResponse)
+def get_attendance_report(
+    skip: int = 0,
+    limit: int = 50,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(RoleChecker([UserRole.ADMIN])),
+):
+    """Restricted to ADMIN. Returns paginated gym-wide check-in logs."""
+    return get_attendance_logs(skip=skip, limit=limit, db=db, current_user=current_user)
+

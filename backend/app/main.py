@@ -24,8 +24,36 @@ settings = get_settings()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Create tables on startup (for development / demo convenience)."""
+    """Create tables and seed demo accounts on startup."""
     Base.metadata.create_all(bind=engine)
+
+    # Seed demo users if they don't exist yet
+    from app.db.session import SessionLocal
+    from app.core.security import hash_password
+    from app.models.user import User, UserRole
+
+    db = SessionLocal()
+    try:
+        demo_users = [
+            {"email": "admin@gmail.com", "full_name": "Demo Admin", "password": "admin123", "role": UserRole.ADMIN},
+            {"email": "trainer@gmail.com", "full_name": "Demo Trainer", "password": "trainer123", "role": UserRole.TRAINER},
+            {"email": "member@gmail.com", "full_name": "Demo Customer", "password": "member123", "role": UserRole.CUSTOMER},
+        ]
+        for u in demo_users:
+            existing = db.query(User).filter(User.email == u["email"]).first()
+            if not existing:
+                user = User(
+                    email=u["email"],
+                    full_name=u["full_name"],
+                    hashed_password=hash_password(u["password"]),
+                    role=u["role"],
+                    is_active=True,
+                )
+                db.add(user)
+        db.commit()
+    finally:
+        db.close()
+
     yield
 
 

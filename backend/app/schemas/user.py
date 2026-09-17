@@ -41,6 +41,7 @@ class UserResponse(BaseModel):
     is_active: bool
     created_at: datetime
     trainer_id: int | None = None
+    member_code: str | None = None
 
     model_config = {"from_attributes": True}
 

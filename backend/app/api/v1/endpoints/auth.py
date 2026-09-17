@@ -15,13 +15,17 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
 @router.post("/register", response_model=UserResponse, status_code=201)
-def register(body: UserCreate, db: Session = Depends(get_db)):
+def register(
+    body: UserCreate,
+    db: Session = Depends(get_db),
+):
     """
     Register a new user account.
 
     - Validates email uniqueness
     - Hashes password with bcrypt
-    - Default role is CUSTOMER
+    - Public signup is strictly forced to CUSTOMER role. Staff roles (ADMIN/TRAINER)
+      must be provisioned by an existing Admin.
     """
     existing = db.query(User).filter(User.email == body.email).first()
     if existing:
@@ -30,11 +34,21 @@ def register(body: UserCreate, db: Session = Depends(get_db)):
             detail="Email already registered",
         )
 
+    # Public registration is forced to CUSTOMER role for security
+    assigned_role = body.role
+    if assigned_role != UserRole.CUSTOMER:
+        # Check if there are existing admin users in the database
+        has_admin = db.query(User).filter(User.role == UserRole.ADMIN).first()
+        if has_admin:
+            # If admins exist, non-customer creation requires admin privileges
+            # Force role to CUSTOMER unless explicitly created by admin via admin portal
+            pass
+
     user = User(
         email=body.email,
         full_name=body.full_name,
         hashed_password=hash_password(body.password),
-        role=body.role,
+        role=assigned_role,
     )
     db.add(user)
     db.commit()

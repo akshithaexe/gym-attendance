@@ -57,7 +57,7 @@ export default function TrainerDashboardPage() {
         status,
       });
       toast.success(
-        `Marked ${status === "present" ? "✅ present" : "❌ absent"}`
+        status === "present" ? "✅ Attendance logged" : "🗑️ Today's log cleared"
       );
       fetchData(); // Refresh data
     } catch (err: any) {
@@ -130,14 +130,14 @@ export default function TrainerDashboardPage() {
                       disabled={marking === trainee.id}
                       className="flex-1 py-2 bg-brand-600/20 text-brand-400 text-sm font-medium rounded-lg hover:bg-brand-600/30 transition-colors disabled:opacity-50"
                     >
-                      ✅ Present
+                      ✅ Check-In / Out
                     </button>
                     <button
                       onClick={() => markAttendance(trainee.id, "absent")}
                       disabled={marking === trainee.id}
                       className="flex-1 py-2 bg-red-600/20 text-red-400 text-sm font-medium rounded-lg hover:bg-red-600/30 transition-colors disabled:opacity-50"
                     >
-                      ❌ Absent
+                      ❌ Clear Today's Log
                     </button>
                   </div>
                 </div>

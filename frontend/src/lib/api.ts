@@ -61,6 +61,9 @@ export async function login(email: string, password: string) {
 
   const { access_token } = response.data;
   localStorage.setItem("access_token", access_token);
+  if (typeof document !== "undefined") {
+    document.cookie = `access_token=${access_token}; path=/; max-age=86400; SameSite=Lax`;
+  }
 
   // Fetch and store user profile
   const userResponse = await api.get("/auth/me");
@@ -87,6 +90,9 @@ export async function register(
 export function logout() {
   localStorage.removeItem("access_token");
   localStorage.removeItem("user");
+  if (typeof document !== "undefined") {
+    document.cookie = "access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+  }
   window.location.href = "/login";
 }
 

@@ -25,7 +25,7 @@ export default function KioskPage() {
       const res = await api.post("/attendance/verify", { token });
       const data: VerifyResponse = res.data;
       setLastCheckin(data);
-      toast.success(`✅ ${data.full_name} checked in!`);
+      toast.success(`✅ ${data.full_name} - ${data.message}`);
     } catch (err: any) {
       const detail = err.response?.data?.detail || "Verification failed";
       toast.error(detail);

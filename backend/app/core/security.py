@@ -5,8 +5,8 @@ Password hashing (bcrypt) and JWT token create / verify utilities.
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
+import bcrypt
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 
 from app.core.config import get_settings
 
@@ -14,17 +14,23 @@ settings = get_settings()
 
 # ── Password hashing ─────────────────────────────────────────
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
 
 def hash_password(plain: str) -> str:
     """Return bcrypt hash of *plain* password."""
-    return pwd_context.hash(plain)
+    pwd_bytes = plain.encode("utf-8")[:72]
+    salt = bcrypt.gensalt()
+    return bcrypt.hashpw(pwd_bytes, salt).decode("utf-8")
 
 
 def verify_password(plain: str, hashed: str) -> bool:
     """Return True if *plain* matches the bcrypt *hashed* value."""
-    return pwd_context.verify(plain, hashed)
+    pwd_bytes = plain.encode("utf-8")[:72]
+    hashed_bytes = hashed.encode("utf-8")
+    try:
+        return bcrypt.checkpw(pwd_bytes, hashed_bytes)
+    except Exception:
+        return False
+
 
 
 # ── JWT helpers ───────────────────────────────────────────────

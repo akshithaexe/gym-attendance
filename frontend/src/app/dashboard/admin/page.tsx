@@ -8,6 +8,7 @@
  * - User management (list, role badges, active status)
  * - Export logs (CSV download)
  * - Assign trainers to customers
+ * - Provision staff & trainer accounts securely
  */
 
 import { useEffect, useState } from "react";
@@ -16,7 +17,7 @@ import api, { getStoredUser } from "@/lib/api";
 import Navbar from "@/components/navbar";
 import AttendanceTable from "@/components/attendance-table";
 import toast from "react-hot-toast";
-import type { AttendanceRecord, User, UserListResponse } from "@/types";
+import type { AttendanceRecord, User } from "@/types";
 import { roleLabel } from "@/lib/utils";
 
 export default function AdminDashboardPage() {
@@ -25,6 +26,14 @@ export default function AdminDashboardPage() {
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Modal state for Provisioning Staff / Trainers
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newEmail, setNewEmail] = useState("");
+  const [newName, setNewName] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [newRole, setNewRole] = useState<"TRAINER" | "ADMIN" | "CUSTOMER">("TRAINER");
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     const user = getStoredUser();
@@ -74,6 +83,29 @@ export default function AdminDashboardPage() {
     toast.success("CSV exported!");
   };
 
+  const handleAddStaff = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      await api.post("/auth/register", {
+        email: newEmail,
+        full_name: newName,
+        password: newPassword,
+        role: newRole,
+      });
+      toast.success(`✅ Successfully created ${newRole} account for ${newName}!`);
+      setShowAddModal(false);
+      setNewEmail("");
+      setNewName("");
+      setNewPassword("");
+      fetchData();
+    } catch (err: any) {
+      toast.error(err.response?.data?.detail || "Failed to create staff account");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const tabs = [
     { key: "attendance" as const, label: "📊 Attendance Logs" },
     { key: "users" as const, label: "👥 User Management" },
@@ -89,10 +121,22 @@ export default function AdminDashboardPage() {
           <div>
             <h1 className="text-2xl font-bold text-white">Admin Dashboard</h1>
             <p className="text-dark-400 text-sm mt-1">
-              Manage gym operations, attendance, and members
+              Manage gym operations, staff provisioning, and attendance
             </p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3">
+            <button
+              onClick={() => router.push("/kiosk")}
+              className="px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition-colors text-sm font-medium flex items-center gap-1.5 shadow-lg shadow-brand-600/20"
+            >
+              📷 Open Kiosk Scanner
+            </button>
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium flex items-center gap-1.5 shadow-lg shadow-purple-600/20"
+            >
+              ➕ Provision Staff Account
+            </button>
             <button
               onClick={fetchData}
               className="px-4 py-2 bg-dark-700 text-dark-200 rounded-lg hover:bg-dark-600 transition-colors text-sm"
@@ -101,7 +145,7 @@ export default function AdminDashboardPage() {
             </button>
             <button
               onClick={exportCSV}
-              className="px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition-colors text-sm"
+              className="px-4 py-2 bg-dark-700 text-dark-200 rounded-lg hover:bg-dark-600 transition-colors text-sm"
             >
               📥 Export CSV
             </button>
@@ -213,6 +257,102 @@ export default function AdminDashboardPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {/* Provision Staff Modal */}
+        {showAddModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+            <div className="glass-card p-6 w-full max-w-md border-purple-500/30">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                  🛡️ Provision Staff Account
+                </h2>
+                <button
+                  onClick={() => setShowAddModal(false)}
+                  className="text-dark-400 hover:text-white transition-colors text-lg"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <form onSubmit={handleAddStaff} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-dark-300 mb-1">
+                    Full Name
+                  </label>
+                  <input
+                    type="text"
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    required
+                    placeholder="Coach Sarah"
+                    className="w-full px-4 py-2 bg-dark-800 border border-dark-600 rounded-lg text-white placeholder:text-dark-500 focus:border-purple-500 transition-colors"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-dark-300 mb-1">
+                    Official Email
+                  </label>
+                  <input
+                    type="email"
+                    value={newEmail}
+                    onChange={(e) => setNewEmail(e.target.value)}
+                    required
+                    placeholder="sarah@gmail.com"
+                    className="w-full px-4 py-2 bg-dark-800 border border-dark-600 rounded-lg text-white placeholder:text-dark-500 focus:border-purple-500 transition-colors"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-dark-300 mb-1">
+                    Temporary Password
+                  </label>
+                  <input
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    required
+                    minLength={6}
+                    placeholder="••••••••"
+                    className="w-full px-4 py-2 bg-dark-800 border border-dark-600 rounded-lg text-white placeholder:text-dark-500 focus:border-purple-500 transition-colors"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-dark-300 mb-1">
+                    Assigned Staff Role
+                  </label>
+                  <select
+                    value={newRole}
+                    onChange={(e: any) => setNewRole(e.target.value)}
+                    className="w-full px-4 py-2 bg-dark-800 border border-dark-600 rounded-lg text-white focus:border-purple-500 transition-colors"
+                  >
+                    <option value="TRAINER">Personal Trainer (TRAINER)</option>
+                    <option value="ADMIN">Gym Administrator (ADMIN)</option>
+                    <option value="CUSTOMER">Gym Member (CUSTOMER)</option>
+                  </select>
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddModal(false)}
+                    className="flex-1 py-2 bg-dark-700 text-dark-300 font-medium rounded-lg hover:bg-dark-600 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="flex-1 py-2 bg-purple-600 text-white font-medium rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50"
+                  >
+                    {submitting ? "Creating..." : "Create Account"}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         )}
       </main>

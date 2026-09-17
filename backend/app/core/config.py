@@ -29,10 +29,13 @@ class Settings(BaseSettings):
     APP_NAME: str = "Gym Attendance System"
     DEBUG: bool = False
 
+    DATABASE_URL_POOLED: str | None = None
+
     model_config = {
         "env_file": ".env",
         "env_file_encoding": "utf-8",
         "case_sensitive": True,
+        "extra": "ignore",
     }
 
 

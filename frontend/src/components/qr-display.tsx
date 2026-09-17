@@ -51,7 +51,7 @@ export default function QRDisplay({ refreshInterval = 30 }: QRDisplayProps) {
   }, [refreshInterval]);
 
   // SVG circular progress
-  const radius = 54;
+  const radius = 115;
   const circumference = 2 * Math.PI * radius;
   const progress = (countdown / refreshInterval) * circumference;
 
@@ -75,24 +75,24 @@ export default function QRDisplay({ refreshInterval = 30 }: QRDisplayProps) {
 
   return (
     <div className="flex flex-col items-center gap-6">
-      {/* QR Code with countdown ring */}
-      <div className="relative">
-        {/* Circular countdown */}
+      {/* QR Code with fixed-size countdown ring */}
+      <div className="relative w-64 h-64 flex items-center justify-center">
+        {/* Fixed 260px SVG countdown ring */}
         <svg
-          className="absolute -inset-4 w-[calc(100%+2rem)] h-[calc(100%+2rem)]"
-          viewBox="0 0 120 120"
+          className="absolute w-[260px] h-[260px] pointer-events-none"
+          viewBox="0 0 260 260"
         >
           <circle
-            cx="60"
-            cy="60"
+            cx="130"
+            cy="130"
             r={radius}
             fill="none"
             stroke="rgba(255,255,255,0.1)"
             strokeWidth="4"
           />
           <circle
-            cx="60"
-            cy="60"
+            cx="130"
+            cy="130"
             r={radius}
             fill="none"
             stroke={countdown <= 5 ? "#ef4444" : "#22c55e"}
@@ -100,21 +100,21 @@ export default function QRDisplay({ refreshInterval = 30 }: QRDisplayProps) {
             strokeLinecap="round"
             strokeDasharray={circumference}
             strokeDashoffset={circumference - progress}
-            transform="rotate(-90 60 60)"
+            transform="rotate(-90 130 130)"
             className="transition-all duration-1000 ease-linear"
           />
         </svg>
 
-        {/* QR Code */}
-        <div className="bg-white p-4 rounded-2xl shadow-2xl">
+        {/* QR Code Card */}
+        <div className="bg-white p-3.5 rounded-2xl shadow-2xl relative z-10">
           {loading ? (
-            <div className="w-48 h-48 flex items-center justify-center">
+            <div className="w-40 h-40 flex items-center justify-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600" />
             </div>
           ) : (
             <QRCodeSVG
               value={qrToken}
-              size={192}
+              size={160}
               level="M"
               includeMargin={false}
             />
@@ -123,7 +123,7 @@ export default function QRDisplay({ refreshInterval = 30 }: QRDisplayProps) {
       </div>
 
       {/* Countdown text */}
-      <div className="text-center">
+      <div className="text-center mt-2">
         <p className="text-3xl font-bold text-white tabular-nums">
           {countdown}s
         </p>
