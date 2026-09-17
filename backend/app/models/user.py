@@ -40,6 +40,8 @@ class User(Base):
     role = Column(Enum(UserRole), default=UserRole.CUSTOMER, nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
     member_code = Column(String(20), unique=True, index=True, nullable=True)
+    membership_type = Column(String(50), nullable=True)
+    membership_expires_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),

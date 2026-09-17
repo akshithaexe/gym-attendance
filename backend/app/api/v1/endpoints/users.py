@@ -143,3 +143,43 @@ def get_my_trainees(
 
     users = query.all()
     return UserListResponse(users=users, total=len(users))
+
+
+from app.schemas.user import MembershipUpdateRequest
+from datetime import timezone
+from dateutil.relativedelta import relativedelta
+
+@router.put("/{user_id}/membership", response_model=UserResponse)
+def update_membership(
+    user_id: int,
+    body: MembershipUpdateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(RoleChecker([UserRole.ADMIN])),
+):
+    """
+    Update a user's membership plan (Admin only).
+    Adds months_to_add to the current expiration date (or from today if expired/none).
+    """
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+    
+    now = datetime.now(timezone.utc)
+    
+    # If extending an existing active membership, add to the current expiry
+    if user.membership_expires_at and user.membership_expires_at > now:
+        base_date = user.membership_expires_at
+    else:
+        base_date = now
+
+    user.membership_expires_at = base_date + relativedelta(months=body.months_to_add)
+    
+    if body.membership_type:
+        user.membership_type = body.membership_type
+
+    db.commit()
+    db.refresh(user)
+    return user

@@ -12,6 +12,8 @@ export interface User {
   is_active: boolean;
   created_at: string;
   trainer_id: number | null;
+  membership_type: string | null;
+  membership_expires_at: string | null;
 }
 
 export interface AttendanceRecord {

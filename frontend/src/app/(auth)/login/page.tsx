@@ -46,7 +46,7 @@ export default function CustomerLoginPage() {
       toast.success(`Welcome back, ${user.full_name}!`);
 
       if (user.role === "CUSTOMER") {
-        window.location.href = "/customer/pass";
+        router.replace("/dashboard/customer");
       } else if (user.role === "ADMIN") {
         window.location.href = "/dashboard/admin";
       } else if (user.role === "TRAINER") {

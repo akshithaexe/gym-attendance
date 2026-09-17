@@ -33,13 +33,20 @@ def generate_qr_token(current_user: User = Depends(get_current_user)):
     Generate a short-lived JWT for the customer's rotating QR pass.
 
     Only CUSTOMER role users can generate a QR pass.
-    The token expires after 30 seconds by default.
+    The customer MUST have an active membership (membership_expires_at in the future).
     """
     if current_user.role != UserRole.CUSTOMER:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only customers can generate QR passes",
         )
+    
+    if not current_user.membership_expires_at or current_user.membership_expires_at < datetime.now(timezone.utc):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Active membership required to generate a QR pass",
+        )
+
     token = create_qr_token(current_user.id)
     return {"qr_token": token}
 

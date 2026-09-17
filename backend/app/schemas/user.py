@@ -25,6 +25,11 @@ class UserUpdate(BaseModel):
     trainer_id: int | None = None
 
 
+class MembershipUpdateRequest(BaseModel):
+    membership_type: str | None = None
+    months_to_add: int = 1
+
+
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
@@ -42,6 +47,8 @@ class UserResponse(BaseModel):
     created_at: datetime
     trainer_id: int | None = None
     member_code: str | None = None
+    membership_type: str | None = None
+    membership_expires_at: datetime | None = None
 
     model_config = {"from_attributes": True}
 
