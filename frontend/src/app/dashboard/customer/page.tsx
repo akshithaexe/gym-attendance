@@ -31,7 +31,7 @@ export default function CustomerDashboardPage() {
     setLoading(true);
     try {
       const [userRes, logsRes] = await Promise.all([
-        api.get(`/users/${userId}`),
+        api.get("/auth/me"),
         api.get("/attendance/my-logs?limit=50"),
       ]);
       setUser(userRes.data);
