@@ -146,7 +146,7 @@ def get_my_trainees(
 
 
 from app.schemas.user import MembershipUpdateRequest
-from datetime import timezone
+from datetime import datetime, timezone
 from dateutil.relativedelta import relativedelta
 
 @router.put("/{user_id}/membership", response_model=UserResponse)
